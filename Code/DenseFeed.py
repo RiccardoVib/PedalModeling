@@ -2,7 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from GetData2 import get_data
+from GetData import get_data
 from TrainFunctionality import coefficient_of_determination
 from scipy.io import wavfile
 from scipy import signal
