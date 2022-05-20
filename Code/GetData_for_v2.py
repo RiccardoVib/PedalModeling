@@ -15,8 +15,8 @@ def get_data(data_dir, start, stop, T, seed=422):
     # -----------------------------------------------------------------------------------------------------------------
     # Load data
     # -----------------------------------------------------------------------------------------------------------------
-    meta = open(os.path.normpath('/'.join([data_dir, 'metadatas48_train_2.pickle'])), 'rb')
-    file_data = open(os.path.normpath('/'.join([data_dir, 'data48_train_2.pickle'])), 'rb')
+    meta = open(os.path.normpath('/'.join([data_dir, 'metadatasOD300_cond1.pickle'])), 'rb')
+    file_data = open(os.path.normpath('/'.join([data_dir, 'dataOD300_cond1.pickle'])), 'rb')
 
     Z = pickle.load(file_data)
     inp = Z['inp']
@@ -28,9 +28,13 @@ def get_data(data_dir, start, stop, T, seed=422):
     Z = np.array(Z)
 
     M = pickle.load(meta)
-    ratios = M['ratio']
-    threshold = M['threshold']
+    tone = M['tone']
+    # drive = M['drive']
+    # mode = M['mode']
     fs = M['samplerate']
+    tone = np.array(tone, dtype=np.float32)
+    # drive = np.array(drive, dtype=np.float32)
+    # mode = np.array(mode, dtype=np.float32)
 
     # -----------------------------------------------------------------------------------------------------------------
     # Scale data to be within (0, 1)
@@ -39,15 +43,7 @@ def get_data(data_dir, start, stop, T, seed=422):
     scaler = my_scaler()
     scaler.fit(Z)
 
-    ratios = np.array(ratios, dtype=np.float32)
-    thresholds = np.array(threshold, dtype=np.float32)
-
-    scaler_ratios = my_scaler()
-    scaler_threshold = my_scaler()
-    scaler_ratios.fit(ratios)
-    scaler_threshold.fit(thresholds)
-
-    scaler = [scaler, scaler_ratios, scaler_threshold]
+    del Z
     # -----------------------------------------------------------------------------------------------------------------
     # Shuffle indexing matrix and and split into test, train validation
     # -----------------------------------------------------------------------------------------------------------------
@@ -57,33 +53,29 @@ def get_data(data_dir, start, stop, T, seed=422):
     # TEST
     all_inp, all_tar = [], []
 
-    meta = open(os.path.normpath('/'.join([data_dir, 'metadatas48_test_2.pickle'])), 'rb')
-    file_data = open(os.path.normpath('/'.join([data_dir, 'data48_test_2.pickle'])), 'rb')
-    #meta = open(os.path.normpath('/'.join([data_dir, 'metadatas466_-10.pickle'])), 'rb')
-    #file_data = open(os.path.normpath('/'.join([data_dir, 'data466_-10.pickle'])), 'rb')
-    #meta = open(os.path.normpath('/'.join([data_dir, 'metadatas733_-40.pickle'])), 'rb')
-    #file_data = open(os.path.normpath('/'.join([data_dir, 'data733_-40.pickle'])), 'rb')
+    meta = open(os.path.normpath('/'.join([data_dir, 'metadatas_test_OD300_cond1.pickle'])), 'rb')
+    file_data = open(os.path.normpath('/'.join([data_dir, 'data_test_OD300_cond1.pickle'])), 'rb')
 
     Z = pickle.load(file_data)
     inp = Z['inp']
     tar = Z['tar']
     inp = np.array(inp, dtype=np.float32)
-    inp = inp[:, start:stop]
     tar = np.array(tar, dtype=np.float32)
+    inp = inp[:, start:stop]
     tar = tar[:, start:stop]
     M = pickle.load(meta)
-    ratios = M['ratio']
-    threshold = M['threshold']
-    inp = scaler[0].transform(inp)
-    tar = scaler[0].transform(tar)
-    ratios = np.array(ratios, dtype=np.float32)
-    thresholds = np.array(threshold, dtype=np.float32)
-    thresholds = scaler[2].transform(thresholds)
-    ratios = scaler[1].transform(ratios)
+    tone = M['tone']
+    #drive = M['drive']
+    #mode = M['mode']
+    inp = scaler.transform(inp)
+    tar = scaler.transform(tar)
+    tone = np.array(tone, dtype=np.float32)
+    #drive = np.array(drive, dtype=np.float32)
+    #mode = np.array(mode, dtype=np.float32)
     window = T
     for t in range(inp.shape[1] - window):
         inp_temp = np.array(
-            [inp[0, t:t + window], np.repeat(ratios[0], window), np.repeat(thresholds[0], window)])
+            [inp[0, t:t + window], np.repeat(tone[0], window)]) 
         all_inp.append(inp_temp.T)
         tar_temp = np.array(tar[0, t:t + window])
         all_tar.append(tar_temp.T)
@@ -116,6 +108,6 @@ if __name__ == '__main__':
 
     data = {'x': x_, 'y': y_}
 
-    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w2_for_v2.pickle'])), 'wb')
+    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w16_for_v2.pickle'])), 'wb')
     pickle.dump(data, file_data)
     file_data.close()

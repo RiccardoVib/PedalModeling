@@ -524,7 +524,7 @@ def inferenceLSTM_enc_dec_v2(data_dir, model, fs, scaler, T, start, stop, name, 
     if generate:
         predictions = np.array(predictions)
         if scaler is not None:
-            predictions = scaler[0].inverse_transform(predictions)
+            predictions = scaler.inverse_transform(predictions)
         predictions = predictions.reshape(-1)
         pred_name = name + '_pred.wav'
         pred_dir = os.path.normpath(os.path.join(data_dir, pred_name))

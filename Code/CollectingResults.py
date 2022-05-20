@@ -12,19 +12,21 @@ from scipy import signal
 from scipy import fft
 from mag_smoothing import mag_smoothing
 from sklearn import metrics
+from GetData import get_data
 
 def retrive_info(architecture, model_dir, units, drop, w):
 
     data_ = '../Files'
+    #x, y, x_val, y_val, x_test, y_test, scaler, fs = get_data(data_dir=data_, w_length=16, seed=422)
     #file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w1_limited.pickle'])), 'rb')
-    file_data = open(os.path.normpath('/'.join([data_, 'data_never_seen_w1.pickle'])), 'rb')
-    data = pickle.load(file_data)
-    x_test = data['x']
+    #file_data = open(os.path.normpath('/'.join([data_, 'data_never_seen_w1.pickle'])), 'rb')
+    #data = pickle.load(file_data)
+    #x_test = data['x']
     #x_test = data['x_test']
     #y_test = data['y_test']
     #fs = data['fs']
     fs = 48000
-    scaler = data['scaler']
+    #scaler = data['scaler']
 
     #create_ref()
     # Dense-----------------------------------------------------------------------------------
@@ -130,95 +132,20 @@ def retrive_info(architecture, model_dir, units, drop, w):
     # change of dataset
     # --------------------------------------------------------------------------------------
 
-    file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w2.pickle'])), 'rb')
-    if w==4:
-        file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w4.pickle'])), 'rb')
-    elif w==8:
-        file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w8.pickle'])), 'rb')
-    elif w==16:
-        #file_data = open(os.path.normpath('/'.join([data_, 'data_never_seen_w16.pickle'])), 'rb')
-        file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w16.pickle'])), 'rb')
+
+    file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w16_OD300_cond1.pickle'])), 'rb')
 
     data = pickle.load(file_data)
-    #x_test = data['x_test']
-    #y_test = data['y_test']
     x_test = data['x']
     fs = data['fs']
     scaler = data['scaler']
     del data
-    # LSTM_enc_dec----------------------------------------------------------------------------
-    if architecture == 'lstm_enc_dec':
-        data_dir_ref='/Users/riccardosimionato/PycharmProjects/All_Results'
-        dir = '/Users/riccardosimionato/PycharmProjects/TrialsDAFx/LSTM_enc_dec_trials/'
-        data_dir = os.path.normpath(os.path.join(dir, model_dir))
-        #data_dir = '/Users/riccardosimionato/PycharmProjects/TrialsDAFx/LSTM_enc_dec_trials/LSTM_enc_dec_32_32'
-        name = 'LSTM_enc_dec'
-        #T = x_test.shape[1]
-        #enc_units = [units[0]]
-        #dec_units = [units[1]]
-
-        #encoder_model, decoder_model = load_model_lstm_enc_dec(T, enc_units, dec_units, 0., model_save_dir=data_dir)
-        #model = [encoder_model, decoder_model]
-        #time_s = measure_time(model, x_test, y_test, True, False, data_dir, fs, scaler, T)
-
-        sig_name = ['_sweep_', '_guitar_', '_drumKick_', '_drumHH_', '_bass_']
-        sec = [32, 135, 238, 240.9, 308.7]
-        sec_end = [1.5, 1.019, 1.0025, 1.0018, 1.007]
-
-        # for l in range(len(sig_name)):
-        #
-        #     start = int(sec[l] * fs)
-        #     stop = int(sec_end[l] * start)
-        #
-        #     s1 = start // x_test.shape[1]
-        #     s2 = stop // x_test.shape[1]
-        #     hours = ((s2 - s1 * time_s / 60) / 60)
-        #     days = hours / 24
-        #     print('Number of samples to be generated: ', s2 - s1)
-        #     print('Hours needed: ', hours)
-        #     print('Days needed: ', days)
-        #
-        #     inferenceLSTM_enc_dec(data_dir=data_dir, fs=fs, x_test=x_test, y_test=y_test, scaler=scaler, start=start, stop=stop, name=sig_name[l], generate=True,
-        #                           model=model, time=time_s, measuring=False)
-        #
-
-
-        all_results = []
-        for l in range(len(sig_name)):
-            file_inp = glob.glob(os.path.normpath('/'.join([data_dir_ref, sig_name[l] + '_inp.wav'])))
-            file_tar = glob.glob(os.path.normpath('/'.join([data_dir_ref, sig_name[l] + '_tar.wav'])))
-            file_pred = glob.glob(os.path.normpath('/'.join([data_dir, sig_name[l] + '_pred.wav'])))
-            for file in file_tar:
-                fs, audio_tar = wavfile.read(file)
-            for file in file_pred:
-                _, audio_pred = wavfile.read(file)
-            for file in file_inp:
-                fs, audio_inp = wavfile.read(file)
-
-            audio_inp = audio_format.pcm2float(audio_inp)
-            audio_tar = audio_format.pcm2float(audio_tar)
-            #audio_inp = audio_inp[w:]
-            #audio_tar = audio_tar[w:]
-            audio_pred = audio_format.pcm2float(audio_pred)
-            audio_pred = audio_pred[:len(audio_tar)]
-            results = measure_performance(audio_tar, audio_pred, name)
-            all_results.append(results)
-            plot_time(audio_tar, audio_pred, audio_inp, fs, data_dir, 'LSTM_enc_dec' + sig_name[l])
-            plot_fft(audio_tar, audio_pred, audio_inp, fs, data_dir, 'LSTM_enc_dec' + sig_name[l])
-
-        with open(os.path.normpath('/'.join([data_dir, 'performance_results.txt'])), 'w') as f:
-            i=0
-            for res in all_results:
-                print('\n', 'Sound', '  : ', sig_name[i], file=f)
-                i=i+1
-                for key, value in res.items():
-                    print('\n', key, '  : ', value, file=f)
 
     # LSTM_enc_dec_v2-------------------------------------------------------------------------
     if architecture == 'lstm_enc_dec_v2':
-        dir = '/Users/riccardosimionato/PycharmProjects/TrialsDAFx/LSTM_enc_dec_v2_trials/'
+        dir = '/Users/riccardosimionato/PycharmProjects/TrialsPedal/'
         data_dir = os.path.normpath(os.path.join(dir, model_dir))
-        data_dir_ref = '/Users/riccardosimionato/PycharmProjects/All_Results/TubeTech'
+        data_dir_ref = '/Users/riccardosimionato/PycharmProjects/All_Results/OD300'
         name = 'LSTM_enc_dec_v2'
         T = x_test.shape[1]
         D = x_test.shape[2]
@@ -275,4 +202,4 @@ if __name__ == '__main__':
     #retrive_info(architecture='dense', model_dir='DenseFeed_32_32', units=[32, 32], drop=0., w=1)
     #retrive_info(architecture='lstm', model_dir='LSTM_32_32_lin', units=[32, 32], drop=0., w=1)
     #retrive_info(architecture='lstm_enc_dec', model_dir='LSTM_enc_dec_32_32', units=[32, 32], drop=0., w=2)
-    retrive_info(architecture='lstm_enc_dec_v2', model_dir='ED_mape', units=[64, 64], drop=0., w=16)
+    retrive_info(architecture='lstm_enc_dec_v2', model_dir='ED_pedal_1', units=[64, 64], drop=0., w=16)
