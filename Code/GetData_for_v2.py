@@ -27,15 +27,6 @@ def get_data(data_dir, start, stop, T, seed=422):
     Z = [inp, tar]
     Z = np.array(Z)
 
-    M = pickle.load(meta)
-    tone = M['tone']
-    # drive = M['drive']
-    # mode = M['mode']
-    fs = M['samplerate']
-    tone = np.array(tone, dtype=np.float32)
-    # drive = np.array(drive, dtype=np.float32)
-    # mode = np.array(mode, dtype=np.float32)
-
     # -----------------------------------------------------------------------------------------------------------------
     # Scale data to be within (0, 1)
     # -----------------------------------------------------------------------------------------------------------------

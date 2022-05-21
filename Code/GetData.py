@@ -26,11 +26,11 @@ def get_data(data_dir, w_length, seed=422):
     Z = np.array(Z)
 
     M = pickle.load(meta)
-    tone = M['tone']
+    #tone = M['tone']
     #drive = M['drive']
     #mode = M['mode']
     fs = M['samplerate']
-    tone = np.array(tone, dtype=np.float32)
+    #tone = np.array(tone, dtype=np.float32)
     #drive = np.array(drive, dtype=np.float32)
     #mode = np.array(mode, dtype=np.float32)
 
@@ -55,7 +55,7 @@ def get_data(data_dir, w_length, seed=422):
 
     for i in range(inp.shape[0]):
         for t in range(inp.shape[1] // window):
-            inp_temp = np.array([inp[i, t * window:t * window + window], np.repeat(tone[i], window)])
+            inp_temp = np.array([inp[i, t * window:t * window + window]])#, np.repeat(tone[i], window)])
             all_inp.append(inp_temp.T)
             tar_temp = np.array(tar[i, t * window:t * window + window])
             all_tar.append(tar_temp.T)
@@ -97,19 +97,19 @@ def get_data(data_dir, w_length, seed=422):
     tar = Z['tar']
     inp = np.array(inp, dtype=np.float32)
     tar = np.array(tar, dtype=np.float32)
-    M = pickle.load(meta)
-    tone = M['tone']
-    #drive = M['drive']
-    #mode = M['mode']
+    #M = pickle.load(meta)
+    #tone = M['tone'] / 2
+    #drive = M['drive'] / 2
+    #mode = M['mode'] / 2
     inp = scaler.transform(inp)
     tar = scaler.transform(tar)
-    tone = np.array(tone, dtype=np.float32)
+    #tone = np.array(tone, dtype=np.float32)
     #drive = np.array(drive, dtype=np.float32)
     #mode = np.array(mode, dtype=np.float32)
 
     for t in range(inp.shape[1] // window):
         inp_temp = np.array(
-            [inp[0, t * window:t * window + window], np.repeat(tone[0], window)])
+            [inp[0, t * window:t * window + window]])#, np.repeat(tone[0], window)])
         all_inp.append(inp_temp.T)
         tar_temp = np.array(tar[0, t * window:t * window + window])
         all_tar.append(tar_temp.T)
@@ -142,6 +142,6 @@ if __name__ == '__main__':
 
     data = {'x': x, 'y': y, 'x_val': x_val, 'y_val': y_val, 'x_test': x_test, 'y_test': y_test, 'scaler': scaler, 'fs': fs}
 
-    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w16_OD300_cond1.pickle'])), 'wb')
+    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w16_OD300_nocond.pickle'])), 'wb')
     pickle.dump(data, file_data)
     file_data.close()
