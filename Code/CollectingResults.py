@@ -133,8 +133,8 @@ def retrive_info(architecture, model_dir, units, drop, w):
     # --------------------------------------------------------------------------------------
 
 
-    file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w16_OD300_cond1.pickle'])), 'rb')
-
+    #file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w16_OD300_cond1.pickle'])), 'rb')
+    file_data = open(os.path.normpath('/'.join([data_, 'data_prepared_w16_OD300_nocond.pickle'])), 'rb')
     data = pickle.load(file_data)
     x_test = data['x']
     fs = data['fs']
@@ -202,4 +202,4 @@ if __name__ == '__main__':
     #retrive_info(architecture='dense', model_dir='DenseFeed_32_32', units=[32, 32], drop=0., w=1)
     #retrive_info(architecture='lstm', model_dir='LSTM_32_32_lin', units=[32, 32], drop=0., w=1)
     #retrive_info(architecture='lstm_enc_dec', model_dir='LSTM_enc_dec_32_32', units=[32, 32], drop=0., w=2)
-    retrive_info(architecture='lstm_enc_dec_v2', model_dir='ED_pedal_1', units=[64, 64], drop=0., w=16)
+    retrive_info(architecture='lstm_enc_dec_v2', model_dir='ED_16_pedal_nocond', units=[64, 64], drop=0., w=16)

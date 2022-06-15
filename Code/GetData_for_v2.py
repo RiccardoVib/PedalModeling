@@ -55,18 +55,18 @@ def get_data(data_dir, start, stop, T, seed=422):
     inp = inp[:, start:stop]
     tar = tar[:, start:stop]
     M = pickle.load(meta)
-    tone = M['tone']
+    #tone = M['tone']
     #drive = M['drive']
     #mode = M['mode']
     inp = scaler.transform(inp)
     tar = scaler.transform(tar)
-    tone = np.array(tone, dtype=np.float32)
+    #tone = np.array(tone, dtype=np.float32)
     #drive = np.array(drive, dtype=np.float32)
     #mode = np.array(mode, dtype=np.float32)
     window = T
     for t in range(inp.shape[1] - window):
         inp_temp = np.array(
-            [inp[0, t:t + window], np.repeat(tone[0], window)]) 
+            [inp[0, t:t + window]]) #, np.repeat(tone[0], window)])
         all_inp.append(inp_temp.T)
         tar_temp = np.array(tar[0, t:t + window])
         all_tar.append(tar_temp.T)
