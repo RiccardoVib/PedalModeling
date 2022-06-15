@@ -17,7 +17,7 @@ from tensorflow.keras.optimizers import Adam, SGD
 import pickle
 
 
-def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
+def trainED(epochs, seed=422, data=None, **kwargs):
     ckpt_flag = kwargs.get('ckpt_flag', False)
     b_size = kwargs.get('b_size', 32)
     learning_rate = kwargs.get('learning_rate', 0.001)
@@ -34,7 +34,6 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
     loss_type = kwargs.get('loss_type', 'mae')
     shuffle_data = kwargs.get('shuffle_data', False)
     w_length = kwargs.get('w_length', 16)
-    n_record = kwargs.get('n_record', 1)
 
     layers_enc = len(encoder_units)
     layers_dec = len(decoder_units)
@@ -49,19 +48,14 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
     n_units_enc = n_units_enc[:-2]
     n_units_dec = n_units_dec[:-2]
 
+    x = data['x']
+    y = data['y']
+    x_val = data['x_val']
+    y_val = data['y_val']
+    x_test = data['x_test']
+    y_test = data['y_test']
+    scaler = data['scaler']
 
-    if data is None:
-        x, y, x_val, y_val, x_test, y_test, scaler, zero_value, fs = get_data(data_dir=data_dir, w_length=w_length, seed=seed)
-    else:
-        x = data['x']
-        y = data['y']
-        x_val = data['x_val']
-        y_val = data['y_val']
-        x_test = data['x_test']
-        y_test = data['y_test']
-        scaler = data['scaler']
-        zero_value = data['zero_value']
-        
     #T past values used to predict the next value
     T = x.shape[1] #time window
     D = x.shape[2] #features
@@ -95,6 +89,8 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
     if drop != 0.:
         outputs = tf.keras.layers.Dropout(drop, name='DropLayer')(outputs)
     decoder_outputs = Dense(1, activation='sigmoid', name='DenseLay')(outputs)
+    decoder_outputs = Dense(1, name='DenseOut')(decoder_outputs)
+
     model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
     model.summary()
 
@@ -114,7 +110,6 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
     else:
         raise ValueError('Please pass loss_type as either MAE or MSE')
 
-    # TODO: Currently not loading weights as we only save the best model... Should probably
     callbacks = []
     if ckpt_flag:
         ckpt_path = os.path.normpath(os.path.join(model_save_dir, save_folder, 'Checkpoints', 'best', 'best.ckpt'))
@@ -152,31 +147,6 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
                             validation_data=([x_val[:,:-1,:], x_val[:,-1, 0]], y_val[:, -1]),
                             callbacks=callbacks)
 
-    # #prediction test
-    # predictions = []
-    # #last train input
-    # last_x = x_test[:, :-1]  # DxT array of length T
-    #
-    # while len(predictions) < len(y_test):
-    #     p = model.predict([last_x[0, :], y_test[0, :-1]]) # 1x1 array -> scalar
-    #     predictions.append(p)
-    #     last_x = np.roll(last_x, -1)
-    #
-    #     for i in range(last_x.shape[0]):
-    #         last_x[-1, i] = p
-    #
-    #
-    # plt.plot(y_test, label='forecast target')
-    # plt.plot(predictions, label='forecast prediction')
-    # plt.legend()
-    predictions_test = model.predict([x_test[:, :-1, :], x_test[:, -1, 0].reshape(-1,1)], batch_size=b_size)
-
-    final_model_test_loss = model.evaluate([x_test[:,:-1,:], x_test[:,-1, 0].reshape(-1,1)], y_test[:, -1], batch_size=b_size, verbose=0)
-    #y_s = np.reshape(y_test[:, 1:], (-1))
-    #y_pred = np.reshape(predictions_test,(-1))
-    #r_squared = coefficient_of_determination(y_s[:1600], y_pred[:1600])
-    #r2_ = r2_score(y_s[:1600], y_pred[:1600])
-    
     if ckpt_flag:
         best = tf.train.latest_checkpoint(ckpt_dir)
         if best is not None:
@@ -201,11 +171,9 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
             'layers_dec': layers_dec,
             'n_units_enc': n_units_enc,
             'n_units_dec': n_units_dec,
-            'n_record': n_record,
             'w_length': w_length,
             # 'Train_loss': results.history['loss'],
-            'Val_loss': results.history['val_loss'],
-            #'r_squared': r_squared
+            'Val_loss': results.history['val_loss']
         }
         print(results)
     if ckpt_flag:
@@ -213,106 +181,54 @@ def trainLSTM(data_dir, epochs, seed=422, data=None, **kwargs):
             for key, value in results.items():
                 print('\n', key, '  : ', value, file=f)
             pickle.dump(results, open(os.path.normpath('/'.join([model_save_dir, save_folder, 'results.pkl'])), 'wb'))
-        
-    if inference:
-        n_past = T - 1
-        predictions = []
-        x_ = x_test.reshape(1, -1, 3)
-        for b in range(x_.shape[1] - 2 * T):
-            x_i = np.array(x_[:, b:b + n_past, :])
-            x_i = x_i.reshape(1,7,3)
-            start = time.time()
-            out = model.predict([x_i, x_[:, b + T, 0].reshape(1,1,1)])
-            predictions.append(out)
-            end = time.time()
-            print(end - start)
 
-        predictions = np.array(predictions)
-        predictions = scaler[0].inverse_transform(predictions)
-        predictions = predictions.reshape(-1)
-        x_gen = x_test
-        y_gen = y_test
-        x_gen = scaler[0].inverse_transform(x_gen[:, :, 0])
-        y_gen = scaler[0].inverse_transform(y_gen)
-        x_gen = x_gen.reshape(-1)
-        y_gen = y_gen.reshape(-1)
+    x_gen = x_test
+    y_gen = y_test
+    predictions = model.predict([x_gen[:, :-1, :], x_gen[:, -1, 0].reshape(-1,1)])
+    print('GenerateWavLoss: ', model.evaluate([x_gen[:, :-1, :], x_gen[:, -1, 0].reshape(-1,1)], y_gen[:, -1], batch_size=b_size, verbose=0))
+    predictions = scaler.inverse_transform(predictions)
+    x_gen = scaler.inverse_transform(x_gen[:, -1, 0])
+    y_gen = scaler.inverse_transform(y_gen[:, -1])
 
-        pred_name = 'predictions.wav'
-        inp_name = 'inp.wav'
-        tar_name = 'tar.wav'
-
-        pred_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', pred_name))
-        inp_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', inp_name))
-        tar_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', tar_name))
-
-        predictions = predictions.astype('int16')
-        x_gen = x_gen.astype('int16')
-        y_gen = y_gen.astype('int16')
-        wavfile.write(pred_dir, 48000, predictions)
-        wavfile.write(inp_dir, 48000, x_gen)
-        wavfile.write(tar_dir, 48000, y_gen)
-
-    if not inference:
-        np.random.seed(seed)
-        x_gen = x_test
-        y_gen = y_test
-        predictions = model.predict([x_gen[:, :-1, :], x_gen[:, -1, 0].reshape(-1,1)])
-        print('GenerateWavLoss: ', model.evaluate([x_gen[:, :-1, :], x_gen[:, -1, 0].reshape(-1,1)], y_gen[:, -1], batch_size=b_size, verbose=0))
-        predictions = scaler[0].inverse_transform(predictions)
-        x_gen = scaler[0].inverse_transform(x_gen[:, -1, 0])
-        y_gen = scaler[0].inverse_transform(y_gen[:, -1])
-
-        predictions = predictions.reshape(-1)
-        x_gen = x_gen.reshape(-1)
-        y_gen = y_gen.reshape(-1)
+    predictions = predictions.reshape(-1)
+    x_gen = x_gen.reshape(-1)
+    y_gen = y_gen.reshape(-1)
 
         
-        # Define directories
-        pred_name = 'LSTM_pred.wav'
-        inp_name = 'LSTM_inp.wav'
-        tar_name = 'LSTM_tar.wav'
+    # Define directories
+    pred_name = 'LSTM_pred.wav'
+    inp_name = 'LSTM_inp.wav'
+    tar_name = 'LSTM_tar.wav'
 
-        pred_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', pred_name))
-        inp_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', inp_name))
-        tar_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', tar_name))
+    pred_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', pred_name))
+    inp_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', inp_name))
+    tar_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'WavPredictions', tar_name))
 
-        if not os.path.exists(os.path.dirname(pred_dir)):
-            os.makedirs(os.path.dirname(pred_dir))
+    if not os.path.exists(os.path.dirname(pred_dir)):
+        os.makedirs(os.path.dirname(pred_dir))
 
-        # Save Wav files
-        predictions = predictions.astype('int16')
-        x_gen = x_gen.astype('int16')
-        y_gen = y_gen.astype('int16')
-        wavfile.write(pred_dir, 48000, predictions)
-        wavfile.write(inp_dir, 48000, x_gen)
-        wavfile.write(tar_dir, 48000, y_gen)
+    # Save Wav files
+    predictions = predictions.astype('int16')
+    x_gen = x_gen.astype('int16')
+    y_gen = y_gen.astype('int16')
+    wavfile.write(pred_dir, 48000, predictions)
+    wavfile.write(inp_dir, 48000, x_gen)
+    wavfile.write(tar_dir, 48000, y_gen)
 
-            # Save some Spectral Plots:
-    #         spectral_dir = os.path.normpath(os.path.join(model_save_dir, save_folder, 'SpectralPlots'))
-    #         if not os.path.exists(spectral_dir):
-    #             os.makedirs(spectral_dir)
-    #         plot_spectral(Zxx=predictions[i], title='Predictions',
-    #                       save_dir=os.path.normpath(os.path.join(spectral_dir, pred_name)).replace('.wav', '.png'))
-    #         plot_spectral(Zxx=x_gen[i], title='Inputs',
-    #                       save_dir=os.path.normpath(os.path.join(spectral_dir, inp_name)).replace('.wav', '.png'))
-    #         plot_spectral(Zxx=y_gen[i], title='Target',
-    #                       save_dir=os.path.normpath(os.path.join(spectral_dir, tar_name)).replace('.wav', '.png'))
-    #
-    #
     return results
 
 
 if __name__ == '__main__':
     data_dir = '../Files'
-    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w8.pickle'])), 'rb')
+    file_data = open(os.path.normpath('/'.join([data_dir, 'data_prepared_w16_OD300.pickle'])), 'rb')
     data = pickle.load(file_data)
     
     seed = 422
     #start = time.time()
-    trainLSTM(data_dir=data_dir,
+    trainED(data_dir=data_dir,
               data=data,
-              model_save_dir='/Users/riccardosimionato/PycharmProjects/All_Results/Giusti',
-              save_folder='LSTM_enc_dec_v2_8',
+              model_save_dir='../../TrainedModels',
+              save_folder='ED_pedal',
               ckpt_flag=True,
               b_size=128,
               learning_rate=0.0001,
@@ -321,9 +237,8 @@ if __name__ == '__main__':
               epochs=100,
               loss_type='mse',
               generate_wav=None,
-              n_record=27,
               w_length=16,
               shuffle_data=False,
-              inference=True)
+              inference=False)
     #end = time.time()
     #print(end - start)
